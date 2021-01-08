@@ -1,26 +1,35 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/binary"
-	"io"
+	"math/rand"
 	"strings"
 )
+
+type CharSet struct {
+	Set   string
+	Count int
+}
 
 type Generator struct {
 	Length       int
 	DefaultSet   string
-	RequiredSets map[string]int
-	Random       io.Reader
+	RequiredSets []CharSet
+	Source       rand.Source
+
+	rng *rand.Rand
 }
 
 func (gen Generator) Generate() (string, error) {
 	var sets []string
 
 	// Generate required character sets
-	for set, count := range gen.RequiredSets {
-		for i := 0; i < count; i++ {
-			sets = append(sets, set)
+	for _, group := range gen.RequiredSets {
+		c := group.Count
+		if c == 0 {
+			c = 1
+		}
+		for i := 0; i < c; i++ {
+			sets = append(sets, group.Set)
 		}
 	}
 
@@ -28,8 +37,8 @@ func (gen Generator) Generate() (string, error) {
 	defaultChars := gen.DefaultSet
 	if len(defaultChars) == 0 {
 		chars := ""
-		for set, _ := range gen.RequiredSets {
-			chars = chars + set
+		for _, group := range gen.RequiredSets {
+			chars = chars + group.Set
 		}
 		defaultChars = uniqueChars(chars)
 	}
@@ -41,10 +50,7 @@ func (gen Generator) Generate() (string, error) {
 
 	// Shuffle
 	for i := range sets {
-		j, err := gen.next(i + 1)
-		if err != nil {
-			return "", err
-		}
+		j := gen.next(i + 1)
 		sets[i], sets[j] = sets[j], sets[i]
 	}
 
@@ -53,10 +59,7 @@ func (gen Generator) Generate() (string, error) {
 	// Resolve
 	for _, set := range sets {
 		chars := strings.Split(set, "")
-		idx, err := gen.next(len(chars))
-		if err != nil {
-			return "", err
-		}
+		idx := gen.next(len(chars))
 		pwd = append(pwd, chars[idx])
 	}
 
@@ -71,40 +74,31 @@ func (gen Generator) MustGenerate() string {
 	return pwd
 }
 
-const maxRand = 65536
-
-func (gen Generator) next(n int) (int, error) {
-	reader := gen.Random
-	if reader == nil {
-		reader = rand.Reader
+func (gen Generator) next(n int) int {
+	if gen.rng != nil {
+		return gen.rng.Intn(n)
 	}
 
-	var next uint16
-	var output int
-	remainder := maxRand % n
-
-	for {
-		err := binary.Read(reader, binary.LittleEndian, &next)
-		if err != nil {
-			return 0, err
-		}
-
-		x := int(next)
-		output = x % n
-		if x < maxRand-remainder {
-			return output, nil
-		}
+	src := gen.Source
+	if src == nil {
+		src = &cryptoSource{}
 	}
+
+	r := rand.New(src)
+	gen.rng = r
+
+	return r.Intn(n)
 }
 
 func uniqueChars(input string) string {
-	set := map[rune]struct{}{}
-	for _, c := range input {
-		set[c] = struct{}{}
-	}
 	uniq := ""
-	for r := range set {
-		uniq = uniq + string(r)
+	found := map[rune]struct{}{}
+	for _, r := range input {
+		if _, ok := found[r]; !ok {
+			uniq = uniq + string(r)
+			found[r] = struct{}{}
+		}
 	}
+
 	return uniq
 }
