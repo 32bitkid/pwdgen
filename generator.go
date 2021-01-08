@@ -36,11 +36,7 @@ func (gen Generator) Generate() (string, error) {
 	// Determine the default character set
 	defaultChars := gen.DefaultSet
 	if len(defaultChars) == 0 {
-		chars := ""
-		for _, group := range gen.RequiredSets {
-			chars = chars + group.Set
-		}
-		defaultChars = uniqueChars(chars)
+		defaultChars = gen.uniqueRequiredChars()
 	}
 
 	// Fill until the desired length
@@ -90,15 +86,16 @@ func (gen Generator) next(n int) int {
 	return r.Intn(n)
 }
 
-func uniqueChars(input string) string {
+func (gen Generator) uniqueRequiredChars() string {
 	uniq := ""
 	found := map[rune]struct{}{}
-	for _, r := range input {
-		if _, ok := found[r]; !ok {
-			uniq = uniq + string(r)
-			found[r] = struct{}{}
+	for _, g := range gen.RequiredSets {
+		for _, r := range g.Set {
+			if _, ok := found[r]; !ok {
+				uniq = uniq + string(r)
+				found[r] = struct{}{}
+			}
 		}
 	}
-
 	return uniq
 }
