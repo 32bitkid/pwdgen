@@ -3,22 +3,22 @@ package main
 import "strings"
 
 const (
-	Lower   = "abcdefghijklmnopqrstuvwxyz"
-	Upper   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	Digits  = "0123456789"
-	Symbols = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+	Lower = "abcdefghijklmnopqrstuvwxyz"
+	Upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	Digit = "0123456789"
 
-	Base58Num   = "123456789"
-	Base58Upper = "ABCDEFGHJKLMNPQRSTUVWXYZ"
 	Base58Lower = "abcdefghijkmnopqrstuvwxyz"
+	Base58Upper = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+	Base58Digit = "123456789"
 
-	WordSymbols = "/-+\\~_."
+	Symbol     = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+	WordSymbol = "/-+\\~_."
 )
 
 var (
 	Alpha    = strings.Join([]string{Lower, Upper}, "")
-	AlphaNum = strings.Join([]string{Lower, Upper, Digits}, "")
-	Any      = strings.Join([]string{Lower, Upper, Digits, Symbols}, "")
+	AlphaNum = strings.Join([]string{Alpha, Digit}, "")
 
-	Base58 = strings.Join([]string{Base58Num, Base58Upper, Base58Lower}, "")
+	Base58Alpha    = strings.Join([]string{Base58Lower, Base58Upper}, "")
+	Base58AlphaNum = strings.Join([]string{Base58Alpha, Base58Digit}, "")
 )

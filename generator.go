@@ -6,13 +6,14 @@ import (
 )
 
 type CharSet struct {
-	Set   string
-	Count int
+	Chars string
+	Min   int
+	Max   int
 }
 
 type Generator struct {
 	Length       int
-	DefaultSet   string
+	DefaultChars string
 	RequiredSets []CharSet
 	Source       rand.Source
 
@@ -24,24 +25,40 @@ func (gen Generator) Generate() (string, error) {
 
 	// Generate required character sets
 	for _, group := range gen.RequiredSets {
-		c := group.Count
-		if c == 0 {
-			c = 1
+		for i := 0; i < group.Min; i++ {
+			sets = append(sets, group.Chars)
 		}
-		for i := 0; i < c; i++ {
-			sets = append(sets, group.Set)
-		}
-	}
-
-	// Determine the default character set
-	defaultChars := gen.DefaultSet
-	if len(defaultChars) == 0 {
-		defaultChars = gen.uniqueRequiredChars()
 	}
 
 	// Fill until the desired length
-	for len(sets) < gen.Length {
-		sets = append(sets, defaultChars)
+	for i := 0; len(sets) < gen.Length; i++ {
+		chars := gen.DefaultChars
+
+		if len(chars) == 0 {
+			uniq := ""
+			found := map[rune]struct{}{}
+			for _, g := range gen.RequiredSets {
+				if g.Min + i >= g.Max && g.Max >= 0 {
+					continue
+				}
+
+				for _, r := range g.Chars {
+					if _, ok := found[r]; ok {
+						continue
+					}
+
+					uniq = uniq + string(r)
+					found[r] = struct{}{}
+				}
+			}
+			if len(uniq) == 0 {
+				panic("out of available characters! check length and character-max settings!")
+			}
+
+			chars = uniq
+		}
+
+		sets = append(sets, chars)
 	}
 
 	// Shuffle
@@ -84,18 +101,4 @@ func (gen Generator) next(n int) int {
 	gen.rng = r
 
 	return r.Intn(n)
-}
-
-func (gen Generator) uniqueRequiredChars() string {
-	uniq := ""
-	found := map[rune]struct{}{}
-	for _, g := range gen.RequiredSets {
-		for _, r := range g.Set {
-			if _, ok := found[r]; !ok {
-				uniq = uniq + string(r)
-				found[r] = struct{}{}
-			}
-		}
-	}
-	return uniq
 }
